@@ -24,6 +24,7 @@ import javax.sip.message.MessageFactory;
 import javax.sip.message.Request;
 import javax.sip.message.Response;
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -208,10 +209,15 @@ public abstract class SIPRequestProcessorParent {
 		}
 		byte[] bytesResult = Bytes.toArray(result);
 
+
 		Document xml;
 		try {
-			xml = reader.read(new ByteArrayInputStream(bytesResult));
-		}catch (DocumentException e) {
+			// 移除无效字符
+			String cleanedXmlString = new String(bytesResult, StandardCharsets.UTF_8)
+					.replaceAll("[\\x00-\\x1F]", ""); // 移除控制字符
+
+			xml = reader.read(new ByteArrayInputStream(cleanedXmlString.getBytes(StandardCharsets.UTF_8)));
+		} catch (DocumentException e) {
 			log.warn("[xml解析异常]： 原文如下： \r\n{}", new String(bytesResult));
 			log.warn("[xml解析异常]： 原文如下： 尝试兼容性处理");
 			String[] xmlLineArray = new String(bytesResult).split("\\r?\\n");
@@ -224,7 +230,7 @@ public abstract class SIPRequestProcessorParent {
 				}
 				stringBuilder.append(s);
 			}
-			xml = reader.read(new ByteArrayInputStream(stringBuilder.toString().getBytes()));
+			xml = reader.read(new ByteArrayInputStream(stringBuilder.toString().getBytes(StandardCharsets.UTF_8)));
 		}
 		return xml.getRootElement();
 	}
